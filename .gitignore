@@ -56,3 +56,6 @@ Desktop.ini
 *.bak
 *.tmp
 .scratch/
+
+# --- Git worktrees ---
+.worktrees/
