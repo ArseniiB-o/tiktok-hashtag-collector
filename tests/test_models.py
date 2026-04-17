@@ -1,4 +1,5 @@
 """Tests for src/models.py (Section R2-A)."""
+
 from __future__ import annotations
 
 import json
@@ -9,8 +10,8 @@ import pytest
 from src.models import MonitorJobStatus, ScraperStats, VideoRecord
 from src.utils import utcnow_naive
 
-
 # --- Fixtures ---
+
 
 @pytest.fixture()
 def minimal_raw() -> dict:
@@ -18,7 +19,13 @@ def minimal_raw() -> dict:
     return {
         "id": "7289347823947823947",
         "author": {"uniqueId": "testuser", "nickname": "Test User"},
-        "stats": {"diggCount": 100, "commentCount": 5, "shareCount": 2, "playCount": 1000, "collectCount": 10},
+        "stats": {
+            "diggCount": 100,
+            "commentCount": 5,
+            "shareCount": 2,
+            "playCount": 1000,
+            "collectCount": 10,
+        },
         "desc": "Test video #cats",
         "createTime": 1705276800,  # 2024-01-15 00:00:00 UTC
         "music": {"id": "123", "title": "Test Song", "authorName": "Test Artist"},
@@ -56,6 +63,7 @@ def full_record() -> VideoRecord:
 
 
 # --- VideoRecord construction ---
+
 
 class TestVideoRecordConstruction:
     def test_full_construction(self, full_record: VideoRecord) -> None:
@@ -148,6 +156,7 @@ class TestVideoRecordConstruction:
 
 # --- to_dict ---
 
+
 class TestVideoRecordToDict:
     def test_produces_flat_dict(self, full_record: VideoRecord) -> None:
         d = full_record.to_dict()
@@ -171,6 +180,7 @@ class TestVideoRecordToDict:
 
 
 # --- from_tiktok_response ---
+
 
 class TestVideoRecordFromResponse:
     def test_parses_minimal_raw(self, minimal_raw: dict) -> None:
@@ -223,6 +233,7 @@ class TestVideoRecordFromResponse:
 
 # --- ScraperStats ---
 
+
 class TestScraperStats:
     def test_default_values(self) -> None:
         stats = ScraperStats(hashtag="cats", started_at=utcnow_naive())
@@ -232,6 +243,7 @@ class TestScraperStats:
 
 
 # --- MonitorJobStatus ---
+
 
 class TestMonitorJobStatus:
     def test_default_values(self) -> None:

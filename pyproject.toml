@@ -37,7 +37,7 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    "TikTokApi==6.3.2",
+    "TikTokApi>=6.3.0,<7",
     "playwright==1.42.0",
     "httpx==0.27.0",
     "curl-cffi==0.7.1",
@@ -118,6 +118,8 @@ select = [
 ignore = [
     "E501",  # line length handled by black
     "B008",  # function calls in argument defaults (click decorators)
+    "UP036", # version guard kept intentionally for user-friendly error message
+    "SIM105", # contextlib.suppress preferred by ruff but try-except is clearer here
 ]
 
 [tool.mypy]

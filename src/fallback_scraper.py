@@ -3,6 +3,7 @@
 Activated automatically when TikTokApi fails (Section F).
 Implements the same fetch_hashtag interface as TikTokScraper.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -215,9 +216,7 @@ class FallbackScraper:
 
                 # E8-B: Anti-bot delay
                 await asyncio.sleep(
-                    random.uniform(
-                        self._config.min_delay_seconds, self._config.max_delay_seconds
-                    )
+                    random.uniform(self._config.min_delay_seconds, self._config.max_delay_seconds)
                 )
 
             if not has_more or not videos:

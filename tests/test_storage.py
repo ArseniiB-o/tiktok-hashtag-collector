@@ -1,11 +1,11 @@
 """Tests for src/storage.py (Section R2-C)."""
+
 from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
 from src.config import AppConfig
 from src.dedup import DedupStore
@@ -83,6 +83,7 @@ class TestLoadExisting:
 
         # Manually create a CSV
         from datetime import date
+
         today = date.today().isoformat()
         csv_path = config.output_dir / f"cats_{today}.csv"
         df = pd.DataFrame([{"video_id": "111"}, {"video_id": "222"}])
@@ -98,6 +99,7 @@ class TestLoadExisting:
         config.output_dir.mkdir(parents=True, exist_ok=True)
 
         from datetime import date
+
         today = date.today().isoformat()
         csv_path = config.output_dir / f"cats_{today}.csv"
         df = pd.DataFrame([{"other_col": "val"}])

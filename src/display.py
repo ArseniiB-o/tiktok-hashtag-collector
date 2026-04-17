@@ -42,9 +42,7 @@ console = Console(legacy_windows=False)
 def show_banner(version: str) -> None:
     """Print the application startup banner with version info."""
     content = f"[bold cyan]TikTok Hashtag Collector[/bold cyan]  [dim]v{version}[/dim]"
-    console.print(
-        Panel(content, box=box.DOUBLE, border_style="cyan", expand=False)
-    )
+    console.print(Panel(content, box=box.DOUBLE, border_style="cyan", expand=False))
 
 
 def show_monitor_banner(hashtags: list[str]) -> None:
@@ -57,9 +55,7 @@ def show_monitor_banner(hashtags: list[str]) -> None:
         f"[yellow]Monitor Mode — watching {n} hashtag{'s' if n != 1 else ''}[/yellow]\n"
         f"{tag_list}{extra}"
     )
-    console.print(
-        Panel(content, box=box.DOUBLE, border_style="yellow", expand=False)
-    )
+    console.print(Panel(content, box=box.DOUBLE, border_style="yellow", expand=False))
 
 
 # ---------------------------------------------------------------------------
@@ -78,9 +74,7 @@ def show_error(
         lines.append(f"\n[bold]Suggested fix:[/bold] {hint}")
     lines.append(f"[dim]See {log_file} for details[/dim]")
     body = "\n".join(lines)
-    console.print(
-        Panel(body, title="[bold red]Error[/bold red]", border_style="red", expand=False)
-    )
+    console.print(Panel(body, title="[bold red]Error[/bold red]", border_style="red", expand=False))
 
 
 def show_success(message: str) -> None:

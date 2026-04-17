@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import traceback
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from typing import TYPE_CHECKING
 
@@ -39,7 +39,7 @@ class JSONFormatter(logging.Formatter):
             A single-line JSON string.
         """
         payload: dict[str, object] = {
-            "ts": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "ts": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
             "level": record.levelname,
             "module": record.module,
             "msg": record.getMessage(),

@@ -21,7 +21,7 @@ class AppConfig:
 
     # Output
     output_dir: Path = field(default_factory=lambda: Path("output"))
-    output_format: str = "csv"          # "csv", "excel", "both"
+    output_format: str = "csv"  # "csv", "excel", "both"
     write_batch_size: int = 50
 
     # Scraping behavior
@@ -53,7 +53,7 @@ class AppConfig:
     # Logging
     log_level: str = "INFO"
     log_file: Path = field(default_factory=lambda: Path("logs/scraper.log"))
-    log_max_bytes: int = 10_485_760   # 10 MB
+    log_max_bytes: int = 10_485_760  # 10 MB
     log_backup_count: int = 5
 
 
@@ -240,9 +240,7 @@ def validate_config(config: AppConfig) -> None:
         )
 
     if config.max_retries <= 0:
-        raise ConfigValidationError(
-            f"max_retries must be > 0, got {config.max_retries}."
-        )
+        raise ConfigValidationError(f"max_retries must be > 0, got {config.max_retries}.")
 
     if config.viewport_width <= 0 or config.viewport_height <= 0:
         raise ConfigValidationError(
@@ -251,9 +249,7 @@ def validate_config(config: AppConfig) -> None:
         )
 
     if config.log_max_bytes <= 0:
-        raise ConfigValidationError(
-            f"log_max_bytes must be > 0, got {config.log_max_bytes}."
-        )
+        raise ConfigValidationError(f"log_max_bytes must be > 0, got {config.log_max_bytes}.")
 
     if config.log_backup_count < 0:
         raise ConfigValidationError(
@@ -261,14 +257,10 @@ def validate_config(config: AppConfig) -> None:
         )
 
     if config.write_batch_size <= 0:
-        raise ConfigValidationError(
-            f"write_batch_size must be > 0, got {config.write_batch_size}."
-        )
+        raise ConfigValidationError(f"write_batch_size must be > 0, got {config.write_batch_size}.")
 
     if config.default_limit <= 0:
-        raise ConfigValidationError(
-            f"default_limit must be > 0, got {config.default_limit}."
-        )
+        raise ConfigValidationError(f"default_limit must be > 0, got {config.default_limit}.")
 
     valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
     if config.log_level not in valid_levels:

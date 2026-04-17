@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 TIKTOK_BASE_URL: str = "https://www.tiktok.com"
@@ -13,12 +13,12 @@ MIN_DELAY_FLOOR: float = 0.5
 
 def utcnow_naive() -> datetime:
     """Return a naive UTC datetime. Replaces deprecated datetime.utcnow()."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def utc_from_timestamp(ts: int) -> datetime:
     """Return a naive UTC datetime from a Unix timestamp. Replaces utcfromtimestamp()."""
-    return datetime.fromtimestamp(ts, tz=timezone.utc).replace(tzinfo=None)
+    return datetime.fromtimestamp(ts, tz=UTC).replace(tzinfo=None)
 
 
 def normalize_hashtag(hashtag: str) -> str:

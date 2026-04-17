@@ -1,4 +1,5 @@
 """APScheduler-based monitoring scheduler for continuous hashtag watching (Section I)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -179,9 +180,7 @@ class MonitorScheduler:
         for job_id, status in self._job_statuses.items():
             apscheduler_job = self._scheduler.get_job(job_id)
             if apscheduler_job:
-                show_success(
-                    f"Watching #{status.hashtag} every {status.interval_minutes}m"
-                )
+                show_success(f"Watching #{status.hashtag} every {status.interval_minutes}m")
 
     def stop(self) -> None:
         """I7: Graceful shutdown — wait for running jobs, flush storage."""
@@ -210,14 +209,16 @@ class MonitorScheduler:
             if apscheduler_job and apscheduler_job.next_run_time:
                 next_run = apscheduler_job.next_run_time.replace(tzinfo=None).isoformat()
 
-            result.append({
-                "hashtag": status.hashtag,
-                "job_id": job_id,
-                "status": "running" if status.is_running else "active",
-                "last_run": status.last_run.isoformat() if status.last_run else None,
-                "next_run": next_run,
-                "total_records_this_session": status.total_records_this_session,
-                "last_run_new_records": status.last_run_new_records,
-                "last_run_error": status.last_run_error,
-            })
+            result.append(
+                {
+                    "hashtag": status.hashtag,
+                    "job_id": job_id,
+                    "status": "running" if status.is_running else "active",
+                    "last_run": status.last_run.isoformat() if status.last_run else None,
+                    "next_run": next_run,
+                    "total_records_this_session": status.total_records_this_session,
+                    "last_run_new_records": status.last_run_new_records,
+                    "last_run_error": status.last_run_error,
+                }
+            )
         return result

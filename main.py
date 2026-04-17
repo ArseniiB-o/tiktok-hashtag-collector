@@ -1,4 +1,5 @@
 """TikTok Hashtag Collector — CLI entry point (Section K)."""
+
 from __future__ import annotations
 
 import sys
@@ -19,6 +20,7 @@ import click
 from src.config import AppConfig, ConfigValidationError, load_config
 from src.dedup import DedupStore
 from src.display import (
+    _build_monitor_table,
     console,
     create_progress,
     show_banner,
@@ -26,11 +28,10 @@ from src.display import (
     show_error,
     show_monitor_banner,
     show_stats_table,
-    show_summary_table,
     show_success,
+    show_summary_table,
     show_warning,
 )
-from src.display import _build_monitor_table
 from src.logger import get_logger, setup_logging
 from src.models import ScraperStats
 from src.storage import StorageManager
@@ -42,6 +43,7 @@ APP_VERSION: str = "1.0.0"
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
+
 
 def _bootstrap(verbose: bool, config_path: str | None) -> AppConfig:
     """Load config, set up logging, return AppConfig."""
@@ -66,6 +68,7 @@ async def _run_fetch(
     combined: bool,
 ) -> ScraperStats:
     """Core fetch pipeline: scrape → dedup → write."""
+    from src.fallback_scraper import FallbackScraper
     from src.scraper import (
         HashtagNotFoundError,
         NetworkError,
@@ -73,9 +76,8 @@ async def _run_fetch(
         ScraperInitializationError,
         TikTokScraper,
     )
-    from src.fallback_scraper import FallbackScraper
 
-    logger = get_logger()
+    get_logger()
     dedup = DedupStore()
     storage = StorageManager(config, dedup)
 
@@ -92,7 +94,11 @@ async def _run_fetch(
         buffer: list = []
 
         with progress:
-            task_id = progress.task_ids[0] if progress.task_ids else progress.add_task(f"#{hashtag}", total=limit, rate=0.0)
+            task_id = (
+                progress.task_ids[0]
+                if progress.task_ids
+                else progress.add_task(f"#{hashtag}", total=limit, rate=0.0)
+            )
             start_ts = time.monotonic()
 
             async for record in scraper_obj.fetch_hashtag(hashtag, limit=limit):
@@ -162,6 +168,7 @@ async def _run_fetch(
 # CLI commands
 # ---------------------------------------------------------------------------
 
+
 @click.group()
 def cli() -> None:
     """TikTok Hashtag Collector — collect video metadata by hashtag."""
@@ -204,17 +211,20 @@ def cmd_fetch(
 
         stats = asyncio.run(_run_fetch(config, clean, limit, combined))
         total_errors += stats.errors
-        all_stats.append({
-            "hashtag": clean,
-            "output_path": str(config.output_dir),
-            "total_fetched": stats.total_fetched,
-            "new_records": stats.new_records,
-            "duplicates_skipped": stats.duplicates_skipped,
-            "duration_seconds": (
-                (stats.finished_at - stats.started_at).total_seconds()
-                if stats.finished_at else 0
-            ),
-        })
+        all_stats.append(
+            {
+                "hashtag": clean,
+                "output_path": str(config.output_dir),
+                "total_fetched": stats.total_fetched,
+                "new_records": stats.new_records,
+                "duplicates_skipped": stats.duplicates_skipped,
+                "duration_seconds": (
+                    (stats.finished_at - stats.started_at).total_seconds()
+                    if stats.finished_at
+                    else 0
+                ),
+            }
+        )
 
     show_summary_table(all_stats)
     sys.exit(0 if total_errors == 0 else 1)
@@ -277,10 +287,13 @@ def cmd_watch(
 
 
 @cli.command("stats")
-@click.option("--output-dir", "output_dir", default="output", show_default=True, help="Output directory")
+@click.option(
+    "--output-dir", "output_dir", default="output", show_default=True, help="Output directory"
+)
 def cmd_stats(output_dir: str) -> None:
     """K4 — Show statistics for existing output files."""
     import pandas as pd
+
     from src.utils import get_file_size_human
 
     output_path = Path(output_dir)
@@ -298,7 +311,9 @@ def cmd_stats(output_dir: str) -> None:
         try:
             df = pd.read_csv(csv_file, dtype=str)
             record_count = len(df)
-            unique_authors = df["author_username"].nunique() if "author_username" in df.columns else 0
+            unique_authors = (
+                df["author_username"].nunique() if "author_username" in df.columns else 0
+            )
             earliest = df["created_at"].min() if "created_at" in df.columns else ""
             latest = df["created_at"].max() if "created_at" in df.columns else ""
             # Extract hashtag from filename (e.g. "cats_2024-01-15.csv" → "cats")
@@ -310,23 +325,30 @@ def cmd_stats(output_dir: str) -> None:
             record_count, unique_authors, earliest, latest = 0, 0, "", ""
             hashtag, date = csv_file.stem, ""
 
-        file_stats.append({
-            "filename": csv_file.name,
-            "hashtag": hashtag,
-            "date": date,
-            "record_count": record_count,
-            "file_size": get_file_size_human(csv_file),
-            "unique_authors": unique_authors,
-            "earliest_date": str(earliest)[:10],
-            "latest_date": str(latest)[:10],
-        })
+        file_stats.append(
+            {
+                "filename": csv_file.name,
+                "hashtag": hashtag,
+                "date": date,
+                "record_count": record_count,
+                "file_size": get_file_size_human(csv_file),
+                "unique_authors": unique_authors,
+                "earliest_date": str(earliest)[:10],
+                "latest_date": str(latest)[:10],
+            }
+        )
 
     show_stats_table(file_stats)
 
 
 @cli.command("clean")
 @click.option("--output-dir", "output_dir", default="output", show_default=True)
-@click.option("--dry-run", is_flag=True, default=False, help="Show what would be removed without modifying files")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Show what would be removed without modifying files",
+)
 def cmd_clean(output_dir: str, dry_run: bool) -> None:
     """K5 — Remove duplicate entries from existing output files."""
     import pandas as pd
@@ -384,8 +406,10 @@ def cmd_config(show: bool, validate: bool, config_path: str | None) -> None:
 
     if show or not validate:
         import dataclasses
+
         config_dict = {
-            k: str(v) for k, v in dataclasses.asdict(config).items()
+            k: str(v)
+            for k, v in dataclasses.asdict(config).items()
             if k not in ("tiktok_session_id", "tiktok_verify_fp", "proxy_password")
         }
         show_config_table(config_dict)

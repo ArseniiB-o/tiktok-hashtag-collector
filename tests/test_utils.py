@@ -1,10 +1,9 @@
 """Tests for src/utils.py (Section R2-D)."""
+
 from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-
-import pytest
 
 from src.utils import (
     construct_video_url,
@@ -169,6 +168,7 @@ class TestGenerateSessionId:
 
     def test_is_uuid_format(self) -> None:
         import re
+
         sid = generate_session_id()
         uuid_pattern = re.compile(
             r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"

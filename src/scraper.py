@@ -1,4 +1,5 @@
 """TikTok scraper module using TikTokApi (unofficial)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -30,6 +31,7 @@ LOG_INTERVAL: int = 50  # Log progress every N records
 
 # --- E9: Custom exception hierarchy ---
 
+
 class ScraperError(Exception):
     """Base exception for scraper errors."""
 
@@ -56,6 +58,7 @@ class NetworkError(ScraperError):
 
 # --- E2: Main scraper class ---
 
+
 class TikTokScraper:
     """Scrapes TikTok video metadata for given hashtags using TikTokApi."""
 
@@ -78,7 +81,9 @@ class TikTokScraper:
 
             self._api = TikTokApi(**kwargs)
             await self._api.create_sessions(
-                ms_tokens=[self._config.tiktok_session_id] if self._config.tiktok_session_id else [],
+                ms_tokens=(
+                    [self._config.tiktok_session_id] if self._config.tiktok_session_id else []
+                ),
                 num_sessions=1,
                 sleep_after=3,
                 headless=self._config.headless,
@@ -111,7 +116,9 @@ class TikTokScraper:
             NetworkError: On unrecoverable network failures.
         """
         if not self._initialized or self._api is None:
-            raise ScraperInitializationError("Call initialize() (or use as async context manager) first")
+            raise ScraperInitializationError(
+                "Call initialize() (or use as async context manager) first"
+            )
 
         clean_hashtag = normalize_hashtag(hashtag)
         count = 0
@@ -161,7 +168,7 @@ class TikTokScraper:
 
     # E10: Async context manager support
 
-    async def __aenter__(self) -> "TikTokScraper":
+    async def __aenter__(self) -> TikTokScraper:
         """Initialize on entry."""
         await self.initialize()
         return self

@@ -1,10 +1,8 @@
 """Tests for src/dedup.py (Section R2-B)."""
+
 from __future__ import annotations
 
 import threading
-from datetime import datetime
-
-import pytest
 
 from src.dedup import DedupStore
 from src.models import VideoRecord
@@ -120,10 +118,7 @@ class TestDedupStore:
             except Exception as e:
                 errors.append(e)
 
-        threads = [
-            threading.Thread(target=worker, args=(ids[i::4],))
-            for i in range(4)
-        ]
+        threads = [threading.Thread(target=worker, args=(ids[i::4],)) for i in range(4)]
         for t in threads:
             t.start()
         for t in threads:

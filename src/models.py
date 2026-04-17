@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -22,12 +22,12 @@ UNKNOWN_LANGUAGE: str = "unknown"
 
 def _utcnow_naive() -> datetime:
     """Return a naive UTC datetime (tz-stripped). Replaces deprecated datetime.utcnow()."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _utc_from_timestamp(ts: int) -> datetime:
     """Return a naive UTC datetime from a Unix timestamp. Replaces deprecated utcfromtimestamp()."""
-    return datetime.fromtimestamp(ts, tz=timezone.utc).replace(tzinfo=None)
+    return datetime.fromtimestamp(ts, tz=UTC).replace(tzinfo=None)
 
 
 # ---------------------------------------------------------------------------
@@ -65,9 +65,7 @@ class VideoRecord:
     def __post_init__(self) -> None:
         """Validate required fields after initialisation."""
         if not isinstance(self.video_id, str) or not self.video_id:
-            raise ValueError(
-                f"video_id must be a non-empty string, got: {self.video_id!r}"
-            )
+            raise ValueError(f"video_id must be a non-empty string, got: {self.video_id!r}")
         if self.url and not self.url.startswith(TIKTOK_VIDEO_URL_PREFIX):
             raise ValueError(
                 f"url must start with '{TIKTOK_VIDEO_URL_PREFIX}' or be empty, "
@@ -107,9 +105,7 @@ class VideoRecord:
         }
 
     @classmethod
-    def from_tiktok_response(
-        cls, raw: dict, source_hashtag: str
-    ) -> "VideoRecord":
+    def from_tiktok_response(cls, raw: dict, source_hashtag: str) -> VideoRecord:
         """Parse a raw TikTok API response dict into a VideoRecord.
 
         All field access is safe — missing keys fall back to sensible defaults
@@ -130,18 +126,14 @@ class VideoRecord:
         username: str = str(author_info.get("uniqueId", "") or "")
 
         url: str = (
-            f"{TIKTOK_BASE_URL}/@{username}/video/{video_id}"
-            if username and video_id
-            else ""
+            f"{TIKTOK_BASE_URL}/@{username}/video/{video_id}" if username and video_id else ""
         )
 
         # Resolve follower count from two possible locations in the API payload
         author_stats: dict = raw.get("authorStats", {}) or {}
         nested_stats: dict = author_info.get("stats", {}) or {}
         author_followers: int = int(
-            author_stats.get("followerCount")
-            or nested_stats.get("followerCount")
-            or 0
+            author_stats.get("followerCount") or nested_stats.get("followerCount") or 0
         )
 
         # Build created_at from unix timestamp (0 → utcnow fallback)
@@ -149,9 +141,7 @@ class VideoRecord:
         try:
             create_time_int: int = int(create_time_raw)
             created_at: datetime = (
-                _utc_from_timestamp(create_time_int)
-                if create_time_int
-                else _utcnow_naive()
+                _utc_from_timestamp(create_time_int) if create_time_int else _utcnow_naive()
             )
         except (ValueError, TypeError, OSError):
             created_at = _utcnow_naive()
@@ -164,9 +154,7 @@ class VideoRecord:
             if isinstance(c, dict) and c.get("title")
         ]
 
-        language: str = str(
-            raw.get("desc_language") or raw.get("language") or UNKNOWN_LANGUAGE
-        )
+        language: str = str(raw.get("desc_language") or raw.get("language") or UNKNOWN_LANGUAGE)
         region: str = str(raw.get("regionCode") or raw.get("region") or "")
 
         return cls(
@@ -182,9 +170,7 @@ class VideoRecord:
             shares=int(stats.get("shareCount", 0) or 0),
             views=int(stats.get("playCount", 0) or 0),
             bookmarks=int(stats.get("collectCount", 0) or 0),
-            duration_seconds=int(
-                (raw.get("video", {}) or {}).get("duration", 0) or 0
-            ),
+            duration_seconds=int((raw.get("video", {}) or {}).get("duration", 0) or 0),
             created_at=created_at,
             scraped_at=_utcnow_naive(),
             hashtags=hashtags,
