@@ -1,0 +1,128 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tiktok-hashtag-collector"
+version = "1.0.0"
+description = "Zero-cloud Python CLI that harvests TikTok video metadata by hashtag into CSV/Excel with dedup, rotation, and live monitoring."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [
+    { name = "tiktok-hashtag-collector contributors" },
+]
+keywords = [
+    "tiktok",
+    "scraper",
+    "hashtag",
+    "cli",
+    "csv",
+    "data-collection",
+    "social-media",
+    "research",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "TikTokApi==6.3.2",
+    "playwright==1.42.0",
+    "httpx==0.27.0",
+    "curl-cffi==0.7.1",
+    "pandas==2.2.1",
+    "openpyxl==3.1.2",
+    "apscheduler==3.10.4",
+    "click==8.1.7",
+    "rich==13.7.1",
+    "pyyaml==6.0.1",
+    "python-dotenv==1.0.1",
+    "tenacity==8.2.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.1.1",
+    "pytest-asyncio==0.23.6",
+    "pytest-mock==3.12.0",
+    "pytest-cov>=4.1",
+    "black>=24.3",
+    "ruff>=0.3",
+    "mypy>=1.9",
+]
+
+[project.urls]
+Homepage = "https://github.com/ArseniiB-o/tiktok-hashtag-collector"
+Repository = "https://github.com/ArseniiB-o/tiktok-hashtag-collector"
+Issues = "https://github.com/ArseniiB-o/tiktok-hashtag-collector/issues"
+
+[project.scripts]
+tiktok-collector = "main:cli"
+
+[tool.setuptools]
+py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line length handled by black
+    "B008",  # function calls in argument defaults (click decorators)
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true

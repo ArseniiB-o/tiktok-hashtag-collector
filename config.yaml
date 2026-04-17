@@ -1,0 +1,33 @@
+output:
+  dir: output
+  format: csv  # csv | excel | both
+  batch_size: 50
+
+scraping:
+  default_limit: 500
+  min_delay: 1.5
+  max_delay: 4.0
+  max_retries: 5
+  base_wait: 30
+  max_wait: 300
+
+browser:
+  headless: true
+  viewport: "1920x1080"
+
+proxy:
+  url: null
+  username: null
+  password: null
+
+tiktok:
+  session_id: null
+  verify_fp: null
+
+monitoring:
+  default_interval: 15
+  default_limit: 50
+
+logging:
+  level: INFO
+  file: logs/scraper.log
