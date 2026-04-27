@@ -59,7 +59,26 @@ class FallbackScraper:
         try:
             from curl_cffi import requests as cffi_requests  # type: ignore[import]
 
-            self._session = cffi_requests.Session(impersonate="chrome120")
+            session_kwargs: dict[str, Any] = {"impersonate": "chrome120"}
+            # Forward the user-configured proxy so fallback traffic is actually
+            # anonymised. Earlier versions silently ignored proxy_url and the
+            # user's real IP went to TikTok despite a configured proxy.
+            if self._config.proxy_url:
+                proxy_url = self._config.proxy_url
+                # Inject creds into the URL only if not already embedded.
+                if (
+                    self._config.proxy_username
+                    and self._config.proxy_password
+                    and "@" not in proxy_url.split("://", 1)[-1]
+                ):
+                    scheme, _, rest = proxy_url.partition("://")
+                    proxy_url = (
+                        f"{scheme}://{self._config.proxy_username}:"
+                        f"{self._config.proxy_password}@{rest}"
+                    )
+                session_kwargs["proxies"] = {"http": proxy_url, "https": proxy_url}
+
+            self._session = cffi_requests.Session(**session_kwargs)
             self._initialized = True
             self._logger.info("FallbackScraper initialized with curl_cffi Chrome120")
         except ImportError as e:

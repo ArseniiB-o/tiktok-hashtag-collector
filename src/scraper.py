@@ -21,7 +21,7 @@ USER_AGENTS: list[str] = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0",
     "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1",
 ]
@@ -80,14 +80,21 @@ class TikTokScraper:
                 kwargs["custom_verify_fp"] = self._config.tiktok_verify_fp
 
             self._api = TikTokApi(**kwargs)
-            await self._api.create_sessions(
-                ms_tokens=(
+
+            session_kwargs: dict[str, Any] = {
+                "ms_tokens": (
                     [self._config.tiktok_session_id] if self._config.tiktok_session_id else []
                 ),
-                num_sessions=1,
-                sleep_after=3,
-                headless=self._config.headless,
-            )
+                "num_sessions": 1,
+                "sleep_after": 3,
+                "headless": self._config.headless,
+            }
+            # Forward the user-configured proxy into Playwright so primary
+            # scraper traffic is actually anonymised. Earlier versions silently
+            # ignored proxy_url, exposing the user's real IP to TikTok.
+            if self._config.proxy_url:
+                session_kwargs["proxies"] = [self._config.proxy_url]
+            await self._api.create_sessions(**session_kwargs)
             self._initialized = True
             self._logger.info("TikTokApi initialized successfully")
         except ImportError as e:

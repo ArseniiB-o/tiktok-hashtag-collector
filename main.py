@@ -14,6 +14,7 @@ if sys.version_info < (3, 11):
 import asyncio
 import time
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -35,7 +36,7 @@ from src.display import (
 from src.logger import get_logger, setup_logging
 from src.models import ScraperStats
 from src.storage import StorageManager
-from src.utils import utcnow_naive
+from src.utils import normalize_hashtag, utcnow_naive
 
 APP_VERSION: str = "1.0.0"
 
@@ -48,7 +49,9 @@ APP_VERSION: str = "1.0.0"
 def _bootstrap(verbose: bool, config_path: str | None) -> AppConfig:
     """Load config, set up logging, return AppConfig."""
     try:
-        cfg_path = Path(config_path) if config_path else None
+        # .resolve() so untrusted automation can't redirect to an arbitrary
+        # YAML file outside the working tree without being explicit about it.
+        cfg_path = Path(config_path).resolve() if config_path else None
         config = load_config(cfg_path)
     except ConfigValidationError as exc:
         show_error(f"Configuration error: {exc}", hint="Check your config.yaml values")
@@ -89,8 +92,9 @@ async def _run_fetch(
 
     progress = create_progress(total=limit, description=f"#{hashtag}")
 
-    async def _do_scrape(scraper_obj) -> None:
-        nonlocal stats
+    async def _do_scrape(scraper_obj: Any) -> None:
+        # `stats` is mutated via attribute assignment, not rebound, so no
+        # nonlocal declaration is needed — Python finds it via lexical scope.
         buffer: list = []
 
         with progress:
@@ -200,13 +204,18 @@ def cmd_fetch(
     if fmt:
         config.output_format = fmt
     if output_dir:
-        config.output_dir = Path(output_dir)
+        # .resolve() prevents accidental path-traversal via untrusted CLI args
+        # (e.g. when this command is wrapped by an automation pipeline).
+        config.output_dir = Path(output_dir).resolve()
 
     all_stats = []
     total_errors = 0
 
     for hashtag in hashtags:
-        clean = hashtag.lstrip("#")
+        clean = normalize_hashtag(hashtag)
+        if not clean:
+            show_warning(f"Skipping invalid hashtag '{hashtag}'")
+            continue
         click.echo(f"\nFetching hashtag: #{clean}  (limit: {limit})")
 
         stats = asyncio.run(_run_fetch(config, clean, limit, combined))
@@ -254,9 +263,18 @@ def cmd_watch(
     dedup = DedupStore()
     storage = StorageManager(config, dedup)
 
-    # Pre-load existing IDs
+    # Apply normalisation once at the CLI boundary so filenames, dedup keys,
+    # and scraper queries all agree on casing and character set.
+    clean_hashtags: list[str] = []
     for hashtag in hashtags:
-        clean = hashtag.lstrip("#")
+        clean = normalize_hashtag(hashtag)
+        if not clean:
+            show_warning(f"Skipping invalid hashtag '{hashtag}'")
+            continue
+        clean_hashtags.append(clean)
+
+    # Pre-load existing IDs
+    for clean in clean_hashtags:
         existing = storage.load_existing(clean)
         dedup.load(existing)
 
@@ -264,8 +282,7 @@ def cmd_watch(
 
     scheduler = MonitorScheduler(config, storage)
 
-    for hashtag in hashtags:
-        clean = hashtag.lstrip("#")
+    for clean in clean_hashtags:
         scheduler.add_hashtag(clean, interval_minutes=interval, limit_per_run=limit)
 
     scheduler.start()
@@ -407,10 +424,18 @@ def cmd_config(show: bool, validate: bool, config_path: str | None) -> None:
     if show or not validate:
         import dataclasses
 
+        # Mask credentials and credential-shaped fields. proxy_username is
+        # included alongside proxy_password because, combined with proxy_url,
+        # a username is enough to reconstruct half of a credential pair.
+        _MASKED_FIELDS = (
+            "tiktok_session_id",
+            "tiktok_verify_fp",
+            "proxy_password",
+            "proxy_username",
+        )
         config_dict = {
-            k: str(v)
+            k: ("****" if k in _MASKED_FIELDS and v is not None else str(v))
             for k, v in dataclasses.asdict(config).items()
-            if k not in ("tiktok_session_id", "tiktok_verify_fp", "proxy_password")
         }
         show_config_table(config_dict)
 

@@ -18,7 +18,7 @@ from src.config import AppConfig
 from src.dedup import DedupStore
 from src.logger import get_logger
 from src.models import VideoRecord
-from src.utils import utcnow_naive
+from src.utils import sanitize_csv_cell, utcnow_naive
 
 logger = get_logger()
 
@@ -82,14 +82,23 @@ class StorageManager:
             A set of video ID strings found in the existing file, or an
             empty set when the file does not exist or is unreadable.
         """
-        path: Path = self.get_output_path(hashtag, combined)
-        if not path.exists():
-            return set()
+        # When format is csv/excel a single path is returned; for "both" the
+        # CSV is the canonical source (it is always written and never read by
+        # openpyxl in append mode), so prefer it whenever it exists.
+        primary: Path = self.get_output_path(hashtag, combined)
+        csv_path: Path = primary if primary.suffix == ".csv" else primary.with_suffix(".csv")
+        xlsx_path: Path = primary if primary.suffix == ".xlsx" else primary.with_suffix(".xlsx")
+
         try:
-            df = pd.read_csv(path, usecols=["video_id"], dtype={"video_id": str})
-            return set(df["video_id"].dropna().unique())
+            if csv_path.exists():
+                df = pd.read_csv(csv_path, usecols=["video_id"], dtype={"video_id": str})
+                return set(df["video_id"].dropna().unique())
+            if xlsx_path.exists():
+                df = pd.read_excel(xlsx_path, usecols=["video_id"], dtype={"video_id": str})
+                return set(df["video_id"].dropna().unique())
         except (FileNotFoundError, KeyError, ValueError, pd.errors.EmptyDataError):
-            return set()
+            pass
+        return set()
 
     def write_records(
         self,
@@ -179,6 +188,12 @@ class StorageManager:
 
         count: int = len(self._buffer)
         df: pd.DataFrame = pd.DataFrame([r.to_dict() for r in self._buffer])
+
+        # Defuse spreadsheet formula injection across every string column.
+        # Scraped fields like description / author_username / music_title can
+        # contain payloads such as "=cmd|'/c calc'!A0" that execute on open.
+        for column in df.select_dtypes(include="object").columns:
+            df[column] = df[column].map(sanitize_csv_cell)
 
         # Date-rotation: recalculate path each flush (get_output_path uses today's UTC date)
         today: str = utcnow_naive().strftime("%Y-%m-%d")

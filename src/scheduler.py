@@ -148,13 +148,14 @@ class MonitorScheduler:
         from src.fallback_scraper import FallbackScraper
         from src.scraper import ScraperInitializationError, TikTokScraper
 
-        dedup = self._storage.dedup
-
         async def _drain(src: Any) -> int:
+            # No pre-filter via dedup.is_new(): that introduced a TOCTOU race
+            # under APScheduler's ThreadPoolExecutor. write_records() performs
+            # an atomic filter+mark under the storage write lock, so duplicate
+            # detection happens exactly once and exactly correctly.
             buffer: list = []
             async for record in src.fetch_hashtag(hashtag, limit=limit):
-                if dedup.is_new(record.video_id):
-                    buffer.append(record)
+                buffer.append(record)
             written = self._storage.write_records(buffer, hashtag)
             self._storage.flush(hashtag)
             return written

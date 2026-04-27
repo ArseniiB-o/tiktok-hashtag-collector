@@ -10,6 +10,34 @@ from pathlib import Path
 TIKTOK_BASE_URL: str = "https://www.tiktok.com"
 MIN_DELAY_FLOOR: float = 0.5
 
+# Characters that, when at the start of a spreadsheet cell, can be interpreted
+# as the beginning of a formula by Excel/LibreOffice/Sheets. Scraped TikTok
+# fields (description, author_username, music_title, …) can contain these
+# verbatim from user input, so they must be neutralised before serialising.
+_FORMULA_INJECTION_PREFIXES: tuple[str, ...] = ("=", "+", "-", "@", "\t", "\r")
+
+
+def sanitize_csv_cell(value: object) -> object:
+    """Neutralise spreadsheet formula-injection vectors in a single cell value.
+
+    Returns *value* unchanged unless it is a string starting with one of
+    ``=``, ``+``, ``-``, ``@``, ``\\t``, ``\\r``, in which case a leading
+    apostrophe is prepended. Excel/LibreOffice/Sheets render the apostrophe
+    invisibly and treat the rest of the cell as literal text rather than a
+    formula. Non-string values pass through untouched.
+
+    Examples:
+        >>> sanitize_csv_cell("=cmd|'/c calc'!A0")
+        "'=cmd|'/c calc'!A0"
+        >>> sanitize_csv_cell("hello")
+        'hello'
+        >>> sanitize_csv_cell(42)
+        42
+    """
+    if isinstance(value, str) and value.startswith(_FORMULA_INJECTION_PREFIXES):
+        return "'" + value
+    return value
+
 
 def utcnow_naive() -> datetime:
     """Return a naive UTC datetime. Replaces deprecated datetime.utcnow()."""
