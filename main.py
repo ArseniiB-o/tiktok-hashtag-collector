@@ -415,7 +415,7 @@ def cmd_clean(output_dir: str, dry_run: bool) -> None:
 def cmd_config(show: bool, validate: bool, config_path: str | None) -> None:
     """K6 — Show or validate current configuration."""
     try:
-        cfg_path = Path(config_path) if config_path else None
+        cfg_path = Path(config_path).resolve() if config_path else None
         config = load_config(cfg_path)
     except ConfigValidationError as exc:
         show_error(f"Config invalid: {exc}")

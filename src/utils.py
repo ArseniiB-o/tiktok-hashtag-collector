@@ -7,6 +7,8 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
+from src.logger import get_logger
+
 TIKTOK_BASE_URL: str = "https://www.tiktok.com"
 MIN_DELAY_FLOOR: float = 0.5
 
@@ -15,6 +17,8 @@ MIN_DELAY_FLOOR: float = 0.5
 # fields (description, author_username, music_title, …) can contain these
 # verbatim from user input, so they must be neutralised before serialising.
 _FORMULA_INJECTION_PREFIXES: tuple[str, ...] = ("=", "+", "-", "@", "\t", "\r")
+
+logger = get_logger()
 
 
 def sanitize_csv_cell(value: object) -> object:
@@ -68,7 +72,13 @@ def normalize_hashtag(hashtag: str) -> str:
         'hello_world'
     """
     stripped = hashtag.strip().lstrip("#").lower()
-    return re.sub(r"[^\w]", "", stripped)
+    result = re.sub(r"[^\w]", "", stripped)
+    if " " in stripped:
+        logger.warning(
+            f'Hashtag "{hashtag}" contains spaces and was normalized to "{result}" '
+            f'— this may be a different hashtag than intended.'
+        )
+    return result
 
 
 def construct_video_url(username: str, video_id: str) -> str:

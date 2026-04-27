@@ -139,7 +139,7 @@ class TikTokScraper:
                 # E8-B: Random delay between records to simulate human browsing
                 delay = random.uniform(
                     self._config.min_delay_seconds, self._config.max_delay_seconds
-                )
+                )  # nosec B311 — intentional jitter, not crypto
                 await asyncio.sleep(delay)
 
                 yield record

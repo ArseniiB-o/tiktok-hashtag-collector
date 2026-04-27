@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import random
+import re
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -21,6 +22,10 @@ from src.scraper import (
     ScraperInitializationError,
 )
 from src.utils import normalize_hashtag
+
+def _redact_proxy_url(url: str) -> str:
+    """Replace password in proxy URL with ****."""
+    return re.sub(r"(https?://[^:]+:)[^@]+(@)", r"\1****\2", url)
 
 # F4: Required headers mimicking a real Chrome browser
 _BASE_HEADERS: dict[str, str] = {
@@ -76,6 +81,7 @@ class FallbackScraper:
                         f"{scheme}://{self._config.proxy_username}:"
                         f"{self._config.proxy_password}@{rest}"
                     )
+                redacted_proxy_url = _redact_proxy_url(proxy_url)
                 session_kwargs["proxies"] = {"http": proxy_url, "https": proxy_url}
 
             self._session = cffi_requests.Session(**session_kwargs)
@@ -86,13 +92,15 @@ class FallbackScraper:
                 f"curl_cffi not installed. Run: pip install curl-cffi. Details: {e}"
             ) from e
         except Exception as e:
-            raise ScraperInitializationError(f"Failed to initialize FallbackScraper: {e}") from e
+            raise ScraperInitializationError(
+                f"Failed to initialize FallbackScraper: {_redact_proxy_url(str(e))}"
+            ) from e
 
     def _get_headers(self) -> dict[str, str]:
         """Build request headers with a random user agent."""
         from src.scraper import USER_AGENTS
 
-        ua = random.choice(USER_AGENTS)
+        ua = random.choice(USER_AGENTS)  # nosec B311 — intentional jitter, not crypto
         return {**_BASE_HEADERS, "User-Agent": ua}
 
     def _resolve_challenge_id(self, hashtag: str) -> str:
@@ -235,7 +243,9 @@ class FallbackScraper:
 
                 # E8-B: Anti-bot delay
                 await asyncio.sleep(
-                    random.uniform(self._config.min_delay_seconds, self._config.max_delay_seconds)
+                    random.uniform(
+                        self._config.min_delay_seconds, self._config.max_delay_seconds
+                    )  # nosec B311 — intentional jitter, not crypto
                 )
 
             if not has_more or not videos:

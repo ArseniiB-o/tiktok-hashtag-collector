@@ -277,8 +277,11 @@ class StorageManager:
                             cell.font = Font(color="0563C1", underline="single")
                 wb.save(path)
                 return
-            except (FileNotFoundError, ValueError, KeyError):
-                pass  # fall through to full rewrite
+            except (FileNotFoundError, ValueError, KeyError) as exc:
+                logger.warning(
+                    f"Excel file {path.name} could not be appended ({type(exc).__name__}), "
+                    f"rewriting from current batch — previous data may be lost if file was corrupt"
+                )
 
         df.to_excel(path, index=False, engine="openpyxl")
         self._format_excel(df, path)

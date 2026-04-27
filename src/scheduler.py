@@ -16,6 +16,7 @@ from src.config import AppConfig
 from src.display import show_success
 from src.logger import get_logger
 from src.models import MonitorJobStatus
+from src.scraper import RateLimitError
 from src.storage import StorageManager
 from src.utils import utcnow_naive
 
@@ -128,6 +129,8 @@ class MonitorScheduler:
             self._logger.error(f"Error in monitor job for #{hashtag}: {e}")
             if status:
                 status.last_run_error = error_msg
+                if isinstance(e, RateLimitError):
+                    status.rate_limits_hit += 1
         finally:
             if status:
                 status.is_running = False
@@ -146,7 +149,12 @@ class MonitorScheduler:
             Number of new records written.
         """
         from src.fallback_scraper import FallbackScraper
-        from src.scraper import ScraperInitializationError, TikTokScraper
+        from src.scraper import (
+            NetworkError,
+            RateLimitError,
+            ScraperInitializationError,
+            TikTokScraper,
+        )
 
         async def _drain(src: Any) -> int:
             # No pre-filter via dedup.is_new(): that introduced a TOCTOU race
@@ -163,7 +171,7 @@ class MonitorScheduler:
         try:
             async with TikTokScraper(self._config) as scraper:
                 return await _drain(scraper)
-        except ScraperInitializationError as e:
+        except (ScraperInitializationError, RateLimitError, NetworkError) as e:
             self._logger.warning(f"TikTokApi failed, trying fallback: {e}")
             fallback = FallbackScraper(self._config)
             fallback.initialize()

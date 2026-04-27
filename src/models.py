@@ -219,4 +219,5 @@ class MonitorJobStatus:
     is_running: bool = False
     total_records_this_session: int = 0
     last_run_new_records: int = 0
+    rate_limits_hit: int = 0
     last_run_error: str | None = None
