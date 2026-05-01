@@ -5,6 +5,7 @@ Other modules must NEVER use print() directly — import from this module.
 
 from __future__ import annotations
 
+import io
 import sys
 
 from rich import box
@@ -23,11 +24,14 @@ from rich.progress import (
 from rich.table import Table
 
 # Force UTF-8 stdout so Rich emojis/symbols render on Windows cp125x locales.
+# Only TextIOWrapper exposes .reconfigure(); pure TextIO substitutes (e.g. test
+# capture buffers) do not, so guard with isinstance to keep mypy happy.
 for _stream in (sys.stdout, sys.stderr):
-    try:
-        _stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
-    except (AttributeError, OSError):
-        pass
+    if isinstance(_stream, io.TextIOWrapper):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, OSError):
+            pass
 
 # Single shared console instance used by all output functions.
 # legacy_windows=False prevents the legacy cp125x renderer that chokes on ✓, ⚠, ●.

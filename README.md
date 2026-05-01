@@ -2,16 +2,61 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-77%20passing-brightgreen.svg)](./tests)
+[![Status: Beta](https://img.shields.io/badge/status-beta-yellow.svg)](./CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/tests-77%20passing%20%2F%2030%25%20coverage-yellow.svg)](./tests)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 A zero-cloud, locally-running Python CLI that harvests TikTok video metadata by
 hashtag and streams results to **CSV / Excel** with dedup, date rotation, live
-monitoring, anti-bot measures, and a Rich-powered terminal UI.
+monitoring, and a Rich-powered terminal UI.
 
-Designed for researchers, trend analysts, and marketers who want a
-**reproducible, scriptable dataset** of TikTok videos without paying for a
-SaaS dashboard.
+Intended audience: **academic researchers under institutional ethics review**
+who need reproducible TikTok metadata samples for documented research purposes.
+Not intended for commercial scraping, marketing, or bulk surveillance.
+
+> ⚠️ **Beta software on a fragile foundation.** This tool depends on
+> unofficial reverse-engineered TikTok endpoints and on the upstream
+> [`TikTokApi`](https://github.com/davidteather/TikTok-Api) library, which
+> the upstream maintainer documents as routinely broken by TikTok's anti-bot
+> changes. Empty responses, captchas, and IP/account blocks are expected,
+> not exceptional.
+
+---
+
+## ⚖️ Legal & ethical use — read before running
+
+**By running this tool you become a data controller under EU/UK data
+protection law.** TikTok video metadata includes personal data
+(`author_username`, `author_display_name`, `author_followers`, free-text
+`description`) attributable to identifiable natural persons. You — not the
+authors of this software — are legally responsible for every byte you collect.
+
+Before running this project you must:
+
+1. **Confirm you have a lawful basis** for processing under GDPR Art. 6 / UK
+   GDPR. "I'm curious" is not a lawful basis. Recognised bases include
+   research carried out under documented institutional ethics approval
+   (GDPR Art. 89), journalism in the public interest, or your own legal
+   obligation. Without a lawful basis, do not run this tool.
+2. **Apply data minimisation.** Drop columns you do not need. Anonymise or
+   pseudonymise as early as possible. Do not retain raw datasets longer
+   than your stated research purpose requires.
+3. **Respect [TikTok's Terms of Service](https://www.tiktok.com/legal/terms-of-service).**
+   Section 5 prohibits automated data collection. Using this tool likely
+   places you in breach of that contract regardless of your local law.
+4. **Comply with rate limits and robots policies.** Do not increase the
+   defaults to overwhelm any infrastructure.
+5. **Be aware of jurisdiction.** EU/EEA/UK residents face direct exposure
+   to data protection authorities (BfDI, ICO, your state-level DPA, …).
+   Penalties apply to natural persons as well as companies.
+6. **Do not redistribute** scraped personal data — derived statistics
+   only, after aggregation and anonymisation.
+
+**The MIT licence covers the software, not your processing activity.** If
+any of the above is unclear, consult a qualified data protection lawyer in
+your jurisdiction before proceeding. The authors accept no liability for
+misuse, but this disclaimer does **not** transfer your obligations as a
+controller back onto them — those obligations remain yours.
 
 ---
 
@@ -31,8 +76,11 @@ SaaS dashboard.
 - **Daily file rotation** — `cats_2026-04-17.csv` → new file on the next day
 - **Monitor mode** — per-hashtag background jobs, live Rich status table,
   graceful `SIGINT`/`SIGTERM` shutdown with buffer flushing
-- **Anti-bot** — 10 rotating User-Agents, randomised per-video delays,
-  exponential back-off on rate limits, optional HTTP / HTTPS / SOCKS5 proxy
+- **Anti-bot mitigations** — 10 rotating User-Agents, randomised per-video
+  delays, optional HTTP / HTTPS / SOCKS5 proxy. (Earlier docs claimed
+  "exponential back-off on rate limits" via `tenacity`; that integration
+  was never implemented and the dependency was removed in the current
+  release. Failures from TikTok currently surface immediately.)
 - **Layered config** — `AppConfig` defaults → `config.yaml` → `.env` → env
   vars → CLI flags (highest wins)
 - **Structured logging** — JSON Lines rotating file handler (10 MB × 5) +
@@ -130,7 +178,7 @@ Run `python main.py <command> --help` for full flag reference.
 
 ---
 
-## Output schema (23 fields)
+## Output schema (22 fields)
 
 | Field | Type | Notes |
 |-------|------|------|
@@ -150,6 +198,12 @@ Run `python main.py <command> --help` for full flag reference.
 CSV files are written with a UTF-8 BOM so Excel opens them without mangling
 non-ASCII characters. Excel files get bold headers, A2 freeze pane,
 auto-fitted column widths, and clickable URL hyperlinks.
+
+Cell values that begin with `=`, `+`, `-`, `@`, `\t`, or `\r` are prefixed
+with a single quote before write to defuse spreadsheet formula injection
+(see [OWASP CSV Injection](https://owasp.org/www-community/attacks/CSV_Injection)).
+TikTok descriptions in the wild are arbitrary user input and have been
+observed carrying such payloads.
 
 ---
 
@@ -280,18 +334,26 @@ stack traces and per-record events.
 
 ---
 
-## Legal & ethics
+## Known limitations
 
-This tool uses **unofficial** TikTok endpoints. It is intended for research
-and personal use within the bounds of TikTok's [Terms of Service](https://www.tiktok.com/legal/terms-of-service).
-You are responsible for:
+- **Test coverage is 30%.** The `scraper.py`, `fallback_scraper.py`,
+  `scheduler.py`, and `display.py` modules are not yet covered by unit
+  tests. The 77 passing tests cover `dedup`, `models`, `storage`, `utils`,
+  and parts of `config`/`logger`. Treat the scraping path as not regression-
+  protected.
+- **Upstream `TikTokApi` is documented as fragile.** Empty responses are
+  the upstream's first listed troubleshooting entry. Plan accordingly.
+- **No retry/back-off.** Earlier versions advertised exponential back-off
+  via `tenacity`, but that integration was never wired up; both have been
+  removed from dependencies in this release. Failures surface immediately.
+- **Single-process dedup.** The dedup store is in-memory; concurrent
+  processes pointed at the same output directory will not coordinate.
+- **No checkpointing.** A long fetch interrupted at record N restarts from
+  the beginning; rows already on disk are skipped via `load_existing`, but
+  pagination cursors are not persisted.
 
-- Respecting target-site robots policies and rate limits.
-- Complying with local data-protection law (GDPR, CCPA, etc.) when storing
-  user-generated content.
-- Obtaining consent before redistributing personal data.
-
-The authors accept no liability for misuse.
+For the full review that produced this list, see the project notes; a
+contributor audit is welcome.
 
 ---
 
